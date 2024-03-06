@@ -160,7 +160,7 @@ async function filterPlaylists(playlistsIds, token) {
     const total_tracks = tracks.total;
     console.log(total_tracks);
     let offset = 0;  // 100 -> I think I was trying in the last 100 songs before
-    for(let a = 0; a < total_tracks; a++) {
+    // for(let a = 0; a < total_tracks; a++) {
         const tracksInPlaylist = await getPlaylistTracks(token, playlistsIds[0], offset);
         console.log(tracksInPlaylist);  // TRIAL
         /*
@@ -169,7 +169,7 @@ async function filterPlaylists(playlistsIds, token) {
         */
         //console.log(tracksInPlaylist.items.length);  // should be gotten with total but doesn't work :(
         //2. check if any belong to following albums: RED, Speak Now, Fearless, 1989
-        for (let i = 0; i < total_tracks - a; i++) {
+        for (let i = 0; i <= 100; i++) {
             let passed = 0;
             const song = tracksInPlaylist.items[i];
             // if (typeof song == TrackObject)    ADD LATER SO THAT IT SKIPS PODCASTS EPISODES
@@ -192,7 +192,6 @@ async function filterPlaylists(playlistsIds, token) {
         // deactivated offset for now but will come back to it later
         // console.log(offset);
         // offset += 100;
-    }
 }
 
 // Make own Flow Func?
@@ -269,11 +268,12 @@ async function handleFearless(song, position, token, playlistId) {
         }
         // Don't handle international mix songs because they are from Debut
        
+        /*
         if ((song.track.name.includes("Forever") && tvName.includes("Forever"))) {
             console.log(song.track.name);
             console.log("TV:");
             console.log(tvName);
-        }
+        }*/
 
         // Replace
         if (song.track.name == tvName) {
@@ -326,7 +326,7 @@ async function handle1989(song, position, token, playlistId) {
         if (song.track.name == tvName) {
             console.log(song.track.name);
             await deleteTrack(token, playlistId, song.track.id);
-            await addTrack(token, playlistId, speakNowTV.items[i].id, position);
+            await addTrack(token, playlistId, NineteenTV.items[i].id, position);
             break;
         }
 
