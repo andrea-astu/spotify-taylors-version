@@ -81,7 +81,7 @@ export async function redirectToAuthCodeFlowReplaceSong(clientId) {
     params.append("client_id", clientId);
     params.append("response_type", "code");
     params.append("redirect_uri", "http://localhost:5174/callback");
-    params.append("scope", "playlist-modify-public playlist-modify-private");
+    params.append("scope", "playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private");
     params.append("code_challenge_method", "S256");
     params.append("code_challenge", challenge);
 
