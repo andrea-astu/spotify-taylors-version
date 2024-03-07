@@ -20,11 +20,18 @@ if (!code && !code_two && !code_three) {
     //const accessToken_two = await getAccessToken(clientId, code_three);
     const profile = await fetchProfile(accessToken);
     const userId = profile.id;
-    const playlists = await fetchPlaylists(accessToken, userId); // USED SAME ACCESS TOKEN
-    const playlistsIds = getPlaylistsIds(playlists, userId);
-    filterPlaylists(playlistsIds, accessToken);
-    console.log(profile); // Profile data logs to console
-    console.log(playlists);
+    // repeat for all playlists, because you only get 20 at a time
+    let offset = 0
+    let playlists = await fetchPlaylists(accessToken, userId, offset); // USED SAME ACCESS TOKEN
+    console.log(playlists.total);
+    for (let a = 0; a <= Math.floor(playlists.total/20); a++) {
+        console.log(a);
+        let playlists = await fetchPlaylists(accessToken, userId, offset); // USED SAME ACCESS TOKEN
+        console.log(playlists);
+        let playlistsIds = getPlaylistsIds(playlists, userId);
+        filterPlaylists(playlistsIds, accessToken, playlistsIds.length);
+        offset += 20;
+    }
     populateUI(profile, playlistsIds); //, playlists);
 }
 
@@ -129,8 +136,8 @@ async function fetchProfile(token) {
     return await result.json();
 }
 
-async function fetchPlaylists(token, userId) {
-    const result = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+async function fetchPlaylists(token, userId, offset) {
+    const result = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists?offset=${offset}`, {
         method: "GET", headers: { Authorization: `Bearer ${token}` }
     });
 
@@ -141,7 +148,7 @@ async function fetchPlaylists(token, userId) {
 // GET MORE THAN TWENTY PLAYLISTS
 function getPlaylistsIds(playlists_full_info, userId) {
     const playlistsIdsArray = []
-    for (let i = 0; i < playlists_full_info.limit; i++) {
+    for (let i = 0; i < playlists_full_info.items.length; i++) {
         if (playlists_full_info.items[i].owner.id == userId) {
             playlistsIdsArray.push(playlists_full_info.items[i].id);
         }
@@ -154,44 +161,49 @@ function getPlaylistsIds(playlists_full_info, userId) {
 
 // checks if there is a non TV track, if so: it's name, album, and in which position of playlist it is
 // make for EVERY playlist
-async function filterPlaylists(playlistsIds, token) {
-    // 1. get all tracks
-    const tracks = await getPlaylistTracks(token, playlistsIds[0], 0);
-    const total_tracks = tracks.total;
-    console.log(total_tracks);
-    let offset = 0;  // 100 -> I think I was trying in the last 100 songs before
-    // for(let a = 0; a < total_tracks; a++) {
-        const tracksInPlaylist = await getPlaylistTracks(token, playlistsIds[0], offset);
-        console.log(tracksInPlaylist);  // TRIAL
-        /*
-        const tot = tracksInPlaylist.total;
-        console.log(tot);
-        */
-        //console.log(tracksInPlaylist.items.length);  // should be gotten with total but doesn't work :(
-        //2. check if any belong to following albums: RED, Speak Now, Fearless, 1989
-        for (let i = 0; i <= 100; i++) {
-            let passed = 0;
-            const song = tracksInPlaylist.items[i];
-            // if (typeof song == TrackObject)    ADD LATER SO THAT IT SKIPS PODCASTS EPISODES
-            // RED URI: 1KVKqWeRuXsJDLTW0VuD29, 4jTYApZPMapg56gRycOn0D (Big Red Machine Version)
-            if (song.track.album.id == "1KVKqWeRuXsJDLTW0VuD29" || song.track.album.id == "4jTYApZPMapg56gRycOn0D"){
-            passed = await handleRed(song, i, token, playlistsIds[0]);
-            }
-            else if (song.track.album.id == "2gP2LMVcIFgVczSJqn340t" || song.track.album.id == "08CWGiv27MVQhYpuTtvx83" || song.track.album.id == "3EzFY9Rg0PpbADMth746zi") {
-                // Platinum Edition, International Version, Big Machine version, 
-                handleFearless(song, i, token, playlistsIds[0]);
-            } else if (song.track.album.id == "6Ar2o9KCqcyYF9J0aQP3au" || song.track.album.id == "6S6JQWzUrJVcJLK4fi74Fw" || song.track.album.id == "75N0Z60SNMQbAPYZuxKgWd") {
-                // Speak Now URI: 6Ar2o9KCqcyYF9J0aQP3au, 6S6JQWzUrJVcJLK4fi74Fw (deluxe), 75N0Z60SNMQbAPYZuxKgWd (BRM Version)
-                handleSpeakNow(song, i, token, playlistsIds[0]);
-            } else if (song.track.album.id == "5fy0X0JmZRZnVa2UEicIOl" || song.track.album.id == "1yGbNOtRIgdIiGHOEBaZWf" || song.track.album.id == "6EsTJnpahwW6xX20zvqQgZ") {
-                // 1989, 1989 deluxe, BRM
-                handle1989(song, i, token, playlistsIds[0]);
-            }
-        }
+async function filterPlaylists(playlistsIds, token, playlistNumber=20) {
+    // repeat 20 times or less -> can only get 20 playlists batches
+    for(let l = 0; l < playlistNumber; l++) {
+        // 1. get all tracks
+        const tracks = await getPlaylistTracks(token, playlistsIds[l], 0);
+        const total_tracks = tracks.total;
+        console.log(total_tracks);
+        let offset = 0;  // only can access 100 songs of a playlist at a time
+        
+        // Make for loop that will go through every 100 songs
+        for(let a = 0; a <= Math.floor(total_tracks/100); a++) {
+            const tracksInPlaylist = await getPlaylistTracks(token, playlistsIds[l], offset);
+            //2. check if any belong to following albums: RED, Speak Now, Fearless, 1989
 
-        // deactivated offset for now but will come back to it later
-        // console.log(offset);
-        // offset += 100;
+            for (let i = 0; i < 100; i++) {
+
+                if (i + offset == total_tracks) {
+                    break;
+                }
+                // console.log(`position: ${i + offset} `);
+                const song = tracksInPlaylist.items[i];
+                // console.log(`song: ${song.track.name} `);
+                // if (typeof song == TrackObject)    ADD LATER SO THAT IT SKIPS PODCASTS EPISODES
+                if (song.track.album.id == "1KVKqWeRuXsJDLTW0VuD29" || song.track.album.id == "4jTYApZPMapg56gRycOn0D"){
+                    // RED URI: 1KVKqWeRuXsJDLTW0VuD29, 4jTYApZPMapg56gRycOn0D (Big Red Machine Version)
+                    await handleRed(song, i + offset, token, playlistsIds[l]);
+                }
+                else if (song.track.album.id == "2gP2LMVcIFgVczSJqn340t" || song.track.album.id == "08CWGiv27MVQhYpuTtvx83" || song.track.album.id == "3EzFY9Rg0PpbADMth746zi") {
+                    // Platinum Edition, International Version, Big Machine version, 
+                    await handleFearless(song, i + offset, token, playlistsIds[l]);
+                } else if (song.track.album.id == "6Ar2o9KCqcyYF9J0aQP3au" || song.track.album.id == "6S6JQWzUrJVcJLK4fi74Fw" || song.track.album.id == "75N0Z60SNMQbAPYZuxKgWd") {
+                    // Speak Now URI: 6Ar2o9KCqcyYF9J0aQP3au, 6S6JQWzUrJVcJLK4fi74Fw (deluxe), 75N0Z60SNMQbAPYZuxKgWd (BRM Version)
+                    await handleSpeakNow(song, i + offset, token, playlistsIds[l]);
+                } else if (song.track.album.id == "5fy0X0JmZRZnVa2UEicIOl" || song.track.album.id == "1yGbNOtRIgdIiGHOEBaZWf" || song.track.album.id == "6EsTJnpahwW6xX20zvqQgZ") {
+                    // 1989, 1989 deluxe, BRM
+                    await handle1989(song, i + offset, token, playlistsIds[l]);
+                }
+            }
+
+            offset += 100;
+
+        }
+    }
 }
 
 // Make own Flow Func?
@@ -245,7 +257,6 @@ async function handleRed(song, position, token, playlistId) {
 }
 
 async function handleFearless(song, position, token, playlistId) {
-    console.log("FEAR");
     const fearTV = await getTVAlbum(token, "4hDok0OAJd57SGIT8xuWJH");
     for (let i = 0; i < fearTV.total; i++) { // maybe like 5 less songs bc of vault tracks
         // All TV have 18 + space characters for TV text -> so str until str.length
@@ -266,14 +277,8 @@ async function handleFearless(song, position, token, playlistId) {
         } else if (song.track.name == "You're Not Sorry") {
             song.track.name = "You’re Not Sorry";
         }
+        
         // Don't handle international mix songs because they are from Debut
-       
-        /*
-        if ((song.track.name.includes("Forever") && tvName.includes("Forever"))) {
-            console.log(song.track.name);
-            console.log("TV:");
-            console.log(tvName);
-        }*/
 
         // Replace
         if (song.track.name == tvName) {
@@ -288,7 +293,6 @@ async function handleFearless(song, position, token, playlistId) {
 }
 
 async function handleSpeakNow(song, position, token, playlistId) {
-    console.log("SPEAK");
     const speakNowTV = await getTVAlbum(token, "5AEDGbliTTfjOB8TSm1sxt");
     for (let i = 0; i < speakNowTV.total; i++) { // maybe like 5 less songs bc of vault tracks
         // All TV have 18 + space characters for TV text -> so str until str.length
@@ -299,12 +303,13 @@ async function handleSpeakNow(song, position, token, playlistId) {
             song.track.name = "Mine";
         }
 
-        // Didn't erase the acoustic versions of Back to December and Haunted
-
+        // handle "If This Was a Movie" in non-album category and don't erase acoustic versions bc. they don't have replacement
+        if ((song.track.name == "If This Was A Movie") || song.track.name.includes("Acoustic")) {
+            break;
+        }
 
         // Replace
         if (song.track.name == tvName) {
-            console.log(song.track.name);
             await deleteTrack(token, playlistId, song.track.id);
             await addTrack(token, playlistId, speakNowTV.items[i].id, position);
             break;
@@ -316,12 +321,16 @@ async function handleSpeakNow(song, position, token, playlistId) {
 }
 
 async function handle1989(song, position, token, playlistId) {
-    console.log("NINE");  // to debug in console
     const NineteenTV = await getTVAlbum(token, "1o59UpKw81iHR0HPiSkJR0"); // get 1989 TV (deluxe)
     for (let i = 0; i < NineteenTV.total; i++) { // maybe like 5 less songs bc of vault tracks
         // All TV have 18 + space characters for TV text -> so str until str.length
         const tvName = NineteenTV.items[i].name.substring(0, NineteenTV.items[i].name.length - 19); // get song name without the "(Taylor's Version)" at the end
         
+        // ignore voice memos from deluxe
+        if (song.track.name.includes("Voice Memo")) {
+            break;
+        }
+
         // Replace
         if (song.track.name == tvName) {
             console.log(song.track.name);
