@@ -222,35 +222,39 @@ const song_table = {
     "6xsEAm6w9oMQYYg3jkEkMT" : "6qAcApH8obo8eqatCKUHd9",
 };
 
-const clientId = "d28c3a7a90114d6e8b3052a40dddcfbb"; // client ID from app
-const params = new URLSearchParams(window.location.search);
-const code = params.get("code");
-const code_two = params.get("code");  // TWO
-const code_three = params.get("code");  // THREE
 
-if (!code && !code_two && !code_three) {
-    redirectToAuthCodeFlowProfile(clientId);
-    redirectToAuthCodeFlowPlaylistIds(clientId);
-    redirectToAuthCodeFlowReplaceSong(clientId);
-} else {
-    const accessToken = await getAccessToken(clientId, code);
-    const profile = await fetchProfile(accessToken);
-    const userId = profile.id;
+export async function runSpotifyWorkflow() {
+    // your entire existing code here
+    const clientId = "d28c3a7a90114d6e8b3052a40dddcfbb"; // client ID from app
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const code_two = params.get("code");  // TWO
+    const code_three = params.get("code");  // THREE
 
-    let offset = 0;
-    let allPlaylistIds = [];
-    let playlists;
+    if (!code && !code_two && !code_three) {
+        redirectToAuthCodeFlowProfile(clientId);
+        redirectToAuthCodeFlowPlaylistIds(clientId);
+        redirectToAuthCodeFlowReplaceSong(clientId);
+    } else {
+        const accessToken = await getAccessToken(clientId, code);
+        const profile = await fetchProfile(accessToken);
+        const userId = profile.id;
 
-    do {
-        playlists = await fetchPlaylists(accessToken, userId, offset);
-        console.log(playlists.total);
-        const batchIds = getPlaylistsIds(playlists, userId);
-        allPlaylistIds = allPlaylistIds.concat(batchIds);
-        offset += 20;
-    } while (playlists.items.length === 20);  // stop when fewer than 20 items are returned
+        let offset = 0;
+        let allPlaylistIds = [];
+        let total = null;
 
-    await filterPlaylists(allPlaylistIds, accessToken); // call once with full list
-    // populateUI(profile, playlistsIds); //, playlists);
+        do {
+            const playlists = await fetchPlaylists(accessToken, userId, offset);
+            if (total === null) total = playlists.total;
+
+            const batchIds = getPlaylistsIds(playlists, userId);
+            allPlaylistIds = allPlaylistIds.concat(batchIds);
+            offset += playlists.items.length;
+        } while (offset < total);
+
+        await filterPlaylists(allPlaylistIds, accessToken); // call once with full list
+    }
 }
 
 export async function redirectToAuthCodeFlowProfile(clientId) {
@@ -363,7 +367,6 @@ async function fetchPlaylists(token, userId, offset) {
 }
 
 // Playlists Ids (created by user)
-// GET MORE THAN TWENTY PLAYLISTS
 function getPlaylistsIds(playlists_full_info, userId) {
     const playlistsIdsArray = []
     for (let i = 0; i < playlists_full_info.items.length; i++) {
@@ -400,6 +403,7 @@ async function getAllPlaylistTracks(token, playlistId) {
 // make for EVERY playlist
 async function filterPlaylists(playlistsIds, token) {
     for (const playlistId of playlistsIds) {
+        console.log("analyzing playlist: " + playlistId)
         const allTracks = await getAllPlaylistTracks(token, playlistId);
     
         for (let i = 0; i < allTracks.length; i++) {
@@ -420,10 +424,6 @@ async function filterPlaylists(playlistsIds, token) {
 }
 
 
-    
-
-
-// Make own Flow Func?
 async function getPlaylistTracks(token, playlistId, offset) {
     // needed permission: playlist-read-private
     const result = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?offset=${offset}&limit=50`, {
@@ -458,13 +458,4 @@ async function addTrack(token, playlistId, trackIn, pos) {
     });
 
     return await result.json();
-}
-
-// UI
-
-function populateUI(profile, playlistsIds) {  //, playlists) {
-    //document.getElementById("playlists_html").innerText = String(playlists_info[0])
-    //document.getElementById("playlists_total").innerText = playlists.total
-    document.getElementById("user_id").innerText = profile.id;
-    document.getElementById("playlists_html").innerText = playlistsIds;
 }
