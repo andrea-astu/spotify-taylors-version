@@ -1,3 +1,26 @@
+import { Route, createBrowserRouter, createRoutesFromElements, RouterProvider } from 'react-router-dom'
+import HomePage from './pages/Home';
+import ProgrammPage from './pages/ProgrammPage';
+
+
+const App = () => {
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <Route path='/'>
+        <Route index element={<HomePage />} /> 
+        {/* <Route path='/programm' element={<ProgrammPage />} /> */}
+        <Route path="/callback" element={<ProgrammPage />} />
+      </Route>
+    )
+  );
+  return <RouterProvider router= { router } />
+}
+
+export default App
+
+
+/*
+
 import { useState } from 'react';
 import { runSpotifyWorkflow } from './myScript';
 
@@ -33,3 +56,4 @@ function App() {
 }
 
 export default App;
+*/

@@ -1,9 +1,7 @@
-// Alternate version of script
 
-import { song_table } from './song_dictionary.js';
+import { nonTVAndTVIDs } from './song_dictionaries.js';
 
 export async function runSpotifyWorkflow() {
-    // your entire existing code here
     const clientId = "d28c3a7a90114d6e8b3052a40dddcfbb"; // client ID from app
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -157,7 +155,7 @@ function getPlaylistsIds(playlists_full_info, userId) {
     return playlistsIdsArray;
 }
 
-// trial
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -178,8 +176,7 @@ async function getAllPlaylistTracks(token, playlistId) {
     return allTracks;
 }
 
-// checks if there is a non TV track, if so: it's name, album, and in which position of playlist it is
-// make for EVERY playlist
+// checks if there is a non TV track, if so: it's name, album, and in which position of playlist it is in
 async function filterPlaylists(playlistsIds, token) {
     for (const playlistId of playlistsIds) {
         console.log("analyzing playlist: " + playlistId)
@@ -190,13 +187,13 @@ async function filterPlaylists(playlistsIds, token) {
           if (!item || !item.track) continue;
           const trackId = item.track.id;
     
-          if (trackId in song_table) {
+          if (trackId in nonTVAndTVIDs) {
             console.log("replacing:")
             console.log(trackId)
             await sleep(200);
             await deleteTrack(token, playlistId, trackId);
             await sleep(200);
-            await addTrack(token, playlistId, song_table[trackId], i);
+            await addTrack(token, playlistId, nonTVAndTVIDs[trackId], i);
           }
         }
     }
